@@ -1,0 +1,673 @@
+
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Recibos Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/imask"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .receipt-title {
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .receipt {
+            background-color: white;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .receipt::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+        }
+        
+        .receipt-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border-radius: 0 0 50% 50% / 20px;
+            padding-bottom: 30px !important;
+        }
+        
+        .receipt-body {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .receipt-footer {
+            border-top: 1px dashed #ccc;
+            position: relative;
+        }
+        
+        .receipt-footer::before,
+        .receipt-footer::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            width: 20px;
+            height: 20px;
+            background-color: #f5f7fa;
+            border-radius: 50%;
+        }
+        
+        .receipt-footer::before {
+            left: -10px;
+        }
+        
+        .receipt-footer::after {
+            right: -10px;
+        }
+        
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 120px;
+            color: rgba(0, 0, 0, 0.03);
+            pointer-events: none;
+            z-index: 0;
+            font-family: 'Playfair Display', serif;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .form-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            padding: 20px;
+        }
+        
+        .input-group {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+        
+        .input-group input,
+        .input-group textarea {
+            width: 100%;
+            padding: 10px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .input-group input:focus,
+        .input-group textarea:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            outline: none;
+        }
+        
+        .input-group label {
+            position: absolute;
+            top: -12px;
+            left: 10px;
+            background: white;
+            padding: 0 6px;
+            font-size: 14px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .stamp {
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%) rotate(12deg);
+            border: 2px solid #ef4444;
+            color: #ef4444;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 8px 30px;
+            border-radius: 8px;
+            opacity: 0.8;
+        }
+        
+        @media print {
+            .no-print {
+                display: none;
+            }
+            body {
+                background-color: white;
+            }
+            .receipt {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body class="p-4">
+    <div class="container mx-auto max-w-6xl">
+        <h1 class="text-4xl font-bold text-center my-8 receipt-title text-gray-800">Gerador de Recibos Glipearte</h1>
+        
+        <!-- Formulário -->
+        <div class="form-container mb-10 no-print">
+            <div class="form-header">
+                <h2 class="text-2xl font-bold">Preencha os dados do recibo</h2>
+                <p class="text-blue-100">Todos os campos serão formatados automaticamente</p>
+            </div>
+            
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="input-group">
+                        <label for="receiptNumber">Número do Recibo</label>
+                        <input type="text" id="receiptNumber" placeholder="Ex: 001/2025">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptDate">Data</label>
+                        <input type="date" id="receiptDate">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptAmount">Valor (R$)</label>
+                        <input type="text" id="receiptAmount" placeholder="0,00">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptFrom">Recebido de</label>
+                        <input type="text" id="receiptFrom" placeholder="Nome completo">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptFromDocument">CPF/CNPJ do Pagador</label>
+                        <input type="text" id="receiptFromDocument" placeholder="000.000.000-00">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="paymentMethod">Forma de Pagamento</label>
+                        <select id="paymentMethod" class="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none">
+                            <option value="Dinheiro">Dinheiro</option>
+                            <option value="Pix">Pix</option>
+                            <option value="Transferência Bancária">Transferência Bancária</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="Cartão de Crédito">Cartão de Crédito</option>
+                            <option value="Cartão de Débito">Cartão de Débito</option>
+                        </select>
+                    </div>
+                    
+                    <div class="input-group md:col-span-2">
+                        <label for="receiptDescription">Referente a</label>
+                        <textarea id="receiptDescription" rows="2" placeholder="Descreva o serviço ou produto"></textarea>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptIssuer">Emitente</label>
+                        <input type="text" id="receiptIssuer" placeholder="Nome do emitente">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptIssuerDocument">CPF/CNPJ do Emitente</label>
+                        <input type="text" id="receiptIssuerDocument" placeholder="000.000.000-00">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptCity">Cidade</label>
+                        <input type="text" id="receiptCity" placeholder="Nome da cidade">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="receiptColor">Cor do Recibo</label>
+                        <select id="receiptColor" class="w-full p-2.5 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none">
+                            <option value="blue">Azul</option>
+                            <option value="green">Verde</option>
+                            <option value="purple">Roxo</option>
+                            <option value="red">Vermelho</option>
+                            <option value="orange">Laranja</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mt-8 flex flex-wrap gap-4 justify-center">
+                    <button id="generateBtn" class="btn btn-primary flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                        </svg>
+                        Gerar Recibo
+                    </button>
+                    <button id="printBtn" class="btn btn-secondary flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                        </svg>
+                        Imprimir
+                    </button>
+                    <button id="downloadBtn" class="btn btn-success flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        Baixar como PDF
+                    </button>
+                    <button id="resetBtn" class="btn btn-danger flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                        </svg>
+                        Limpar
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Visualização do Recibo -->
+        <div id="receiptContainer" class="mb-12 hidden">
+            <div id="receipt" class="receipt rounded-xl p-0 max-w-3xl mx-auto">
+                <div class="watermark">RECIBO</div>
+                
+                <div id="receiptHeaderColor" class="receipt-header py-6 px-8 text-center">
+                    <h2 class="text-3xl font-bold receipt-title mb-1">RECIBO</h2>
+                    <p class="text-xl" id="displayReceiptNumber">Nº 001/2023</p>
+                </div>
+                
+                <div class="receipt-body p-8 relative">
+                    <div class="mb-6 text-right">
+                        <p class="text-gray-700" id="displayReceiptDate">Data: 01/01/2023</p>
+                    </div>
+                    
+                    <div class="mb-8 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <p class="text-2xl font-bold text-gray-800 text-center">
+                            R$ <span id="displayReceiptAmount">0,00</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="text-gray-700 leading-relaxed">
+                            Recebi de <strong id="displayReceiptFrom">_____________________</strong> 
+                            <span id="displayReceiptFromDocument" class="text-sm text-gray-500 block mt-1">CPF/CNPJ: _____________________</span>
+                            a importância de <strong id="displayReceiptAmountText">_____________________</strong> 
+                            referente a <span id="displayReceiptDescription" class="font-medium">_____________________</span>.
+                        </p>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <p class="text-gray-700">
+                            <span class="font-medium">Forma de pagamento:</span> <span id="displayPaymentMethod">Dinheiro</span>
+                        </p>
+                    </div>
+                    
+                    <div class="mb-10">
+                        <p class="text-gray-700 text-sm">
+                            Para maior clareza firmo o presente recibo para que produza os seus efeitos, dando plena, rasa e irrevogável quitação, pelo valor recebido.
+                        </p>
+                    </div>
+                    
+                    <div id="stamp" class="stamp hidden">PAGO</div>
+                    
+                    <div class="text-right mb-6">
+                        <p id="displayReceiptCity" class="text-gray-700">Cidade, </p>
+                    </div>
+                    
+                    <div class="receipt-footer pt-10 text-center">
+                        <div class="mb-2 border-t border-gray-300 w-64 mx-auto pt-2"></div>
+                        <p id="displayReceiptIssuer" class="font-medium">Nome do Emitente</p>
+                        <p id="displayReceiptIssuerDocument" class="text-gray-600">CPF/CNPJ: 000.000.000-00</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Definir a data atual como padrão
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const formattedDate = today.toISOString().substr(0, 10);
+            document.getElementById('receiptDate').value = formattedDate;
+            
+            // Inicializar os botões
+            document.getElementById('generateBtn').addEventListener('click', generateReceipt);
+            document.getElementById('printBtn').addEventListener('click', printReceipt);
+            document.getElementById('resetBtn').addEventListener('click', resetForm);
+            document.getElementById('downloadBtn').addEventListener('click', downloadPDF);
+            document.getElementById('receiptColor').addEventListener('change', updateReceiptColor);
+            
+            // Inicializar máscaras para os campos
+            setupInputMasks();
+        });
+
+        // Configurar máscaras para os campos
+        function setupInputMasks() {
+            // Máscara para CPF/CNPJ
+            const cpfCnpjMask = function(value) {
+                if (value.length <= 14) {
+                    return {
+                        mask: '000.000.000-00'
+                    };
+                } else {
+                    return {
+                        mask: '00.000.000/0000-00'
+                    };
+                }
+            };
+            
+            // Aplicar máscara ao CPF/CNPJ do emitente
+            IMask(document.getElementById('receiptIssuerDocument'), {
+                mask: cpfCnpjMask,
+                dispatch: function(appended, dynamicMasked) {
+                    return dynamicMasked.value.replace(/\D/g, '');
+                }
+            });
+            
+            // Aplicar máscara ao CPF/CNPJ do pagador
+            IMask(document.getElementById('receiptFromDocument'), {
+                mask: cpfCnpjMask,
+                dispatch: function(appended, dynamicMasked) {
+                    return dynamicMasked.value.replace(/\D/g, '');
+                }
+            });
+            
+            // Máscara para valores monetários
+            IMask(document.getElementById('receiptAmount'), {
+                mask: Number,
+                scale: 2,
+                signed: false,
+                thousandsSeparator: '.',
+                padFractionalZeros: true,
+                normalizeZeros: true,
+                radix: ',',
+                mapToRadix: ['.']
+            });
+            
+            // Máscara para número do recibo
+            IMask(document.getElementById('receiptNumber'), {
+                mask: '000/0000'
+            });
+        }
+
+        // Função para converter número em texto por extenso
+        function numberToWords(num) {
+            if (num === 0) return 'zero';
+            
+            const units = ['', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+            const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+            const tens = ['', 'dez', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+            const hundreds = ['', 'cento', 'duzentos', 'trezentos', 'quatrocentos', 'quinhentos', 'seiscentos', 'setecentos', 'oitocentos', 'novecentos'];
+            const scales = ['', 'mil', 'milhão', 'bilhão', 'trilhão'];
+            const scalesPlural = ['', 'mil', 'milhões', 'bilhões', 'trilhões'];
+            
+            // Função para converter grupos de três dígitos
+            function convertGroup(n) {
+                let result = '';
+                
+                // Centenas
+                if (n >= 100) {
+                    if (n === 100) {
+                        return 'cem';
+                    } else {
+                        result = hundreds[Math.floor(n / 100)] + ' e ';
+                        n %= 100;
+                        if (n === 0) {
+                            return result.slice(0, -3); // Remove o " e " final
+                        }
+                    }
+                }
+                
+                // Dezenas e unidades
+                if (n < 10) {
+                    result += units[n];
+                } else if (n < 20) {
+                    result += teens[n - 10];
+                } else {
+                    result += tens[Math.floor(n / 10)];
+                    if (n % 10 !== 0) {
+                        result += ' e ' + units[n % 10];
+                    }
+                }
+                
+                return result;
+            }
+            
+            // Converter o número para string e dividir em grupos de três dígitos
+            const numStr = Math.floor(num).toString();
+            const groups = [];
+            for (let i = numStr.length; i > 0; i -= 3) {
+                groups.push(parseInt(numStr.slice(Math.max(0, i - 3), i)));
+            }
+            
+            // Converter cada grupo e adicionar a escala correspondente
+            let result = '';
+            for (let i = 0; i < groups.length; i++) {
+                const group = groups[i];
+                if (group !== 0) {
+                    const scaleIndex = groups.length - i - 1;
+                    const groupText = convertGroup(group);
+                    const scale = group === 1 ? scales[scaleIndex] : scalesPlural[scaleIndex];
+                    
+                    if (result !== '') {
+                        result = groupText + (scale ? ' ' + scale : '') + ' e ' + result;
+                    } else {
+                        result = groupText + (scale ? ' ' + scale : '');
+                    }
+                }
+            }
+            
+            return result;
+        }
+
+        // Função para formatar valor em reais
+        function formatCurrency(value) {
+            return parseFloat(value.replace(/\./g, '').replace(',', '.')).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        // Função para formatar a data
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        // Função para atualizar a cor do recibo
+        function updateReceiptColor() {
+            const color = document.getElementById('receiptColor').value;
+            const header = document.getElementById('receiptHeaderColor');
+            
+            // Remover classes anteriores
+            header.className = 'receipt-header py-6 px-8 text-center';
+            
+            // Adicionar nova classe de cor
+            switch (color) {
+                case 'green':
+                    header.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                    break;
+                case 'purple':
+                    header.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)';
+                    break;
+                case 'red':
+                    header.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                    break;
+                case 'orange':
+                    header.style.background = 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)';
+                    break;
+                default: // blue
+                    header.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+            }
+        }
+
+        // Função para gerar o recibo
+        function generateReceipt() {
+            // Obter valores do formulário
+            const receiptNumber = document.getElementById('receiptNumber').value || '001/2023';
+            const receiptDate = document.getElementById('receiptDate').value;
+            const receiptAmount = document.getElementById('receiptAmount').value || '0,00';
+            const receiptFrom = document.getElementById('receiptFrom').value || '____________________';
+            const receiptFromDocument = document.getElementById('receiptFromDocument').value || '____________________';
+            const receiptDescription = document.getElementById('receiptDescription').value || '____________________';
+            const receiptIssuer = document.getElementById('receiptIssuer').value || 'Nome do Emitente';
+            const receiptIssuerDocument = document.getElementById('receiptIssuerDocument').value || '000.000.000-00';
+            const receiptCity = document.getElementById('receiptCity').value || 'Cidade';
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            
+            // Formatar valores
+            const formattedAmount = receiptAmount;
+            const formattedDate = formatDate(receiptDate);
+            
+            // Converter valor para texto
+            const numericValue = parseFloat(receiptAmount.replace(/\./g, '').replace(',', '.'));
+            const amountInWords = numberToWords(numericValue) + ' reais';
+            
+            // Atualizar o recibo
+            document.getElementById('displayReceiptNumber').textContent = `Nº ${receiptNumber}`;
+            document.getElementById('displayReceiptDate').textContent = `Data: ${formattedDate}`;
+            document.getElementById('displayReceiptAmount').textContent = formattedAmount;
+            document.getElementById('displayReceiptFrom').textContent = receiptFrom;
+            document.getElementById('displayReceiptFromDocument').textContent = `CPF/CNPJ: ${receiptFromDocument}`;
+            document.getElementById('displayReceiptAmountText').textContent = amountInWords;
+            document.getElementById('displayReceiptDescription').textContent = receiptDescription;
+            document.getElementById('displayReceiptIssuer').textContent = receiptIssuer;
+            document.getElementById('displayReceiptIssuerDocument').textContent = `CPF/CNPJ: ${receiptIssuerDocument}`;
+            document.getElementById('displayReceiptCity').textContent = `${receiptCity}, ${formattedDate}`;
+            document.getElementById('displayPaymentMethod').textContent = paymentMethod;
+            
+            // Mostrar o carimbo "PAGO"
+            document.getElementById('stamp').classList.remove('hidden');
+            
+            // Atualizar a cor do recibo
+            updateReceiptColor();
+            
+            // Mostrar o recibo
+            document.getElementById('receiptContainer').classList.remove('hidden');
+            
+            // Rolar até o recibo
+            document.getElementById('receiptContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Função para imprimir o recibo
+        function printReceipt() {
+            if (document.getElementById('receiptContainer').classList.contains('hidden')) {
+                alert('Gere um recibo primeiro!');
+                return;
+            }
+            window.print();
+        }
+
+        // Função para baixar como PDF
+        function downloadPDF() {
+            if (document.getElementById('receiptContainer').classList.contains('hidden')) {
+                alert('Gere um recibo primeiro!');
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const receipt = document.getElementById('receipt');
+            
+            html2canvas(receipt, {
+                scale: 2,
+                useCORS: true,
+                logging: false
+            }).then(canvas => {
+                const imgData = canvas.toDataURL('image/png');
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const imgWidth = canvas.width;
+                const imgHeight = canvas.height;
+                const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                const imgY = 30;
+                
+                pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                
+                // Adicionar rodapé
+                pdf.setFontSize(8);
+                pdf.setTextColor(150);
+                pdf.text('Documento gerado eletronicamente', pdfWidth / 2, pdfHeight - 10, { align: 'center' });
+                
+                pdf.save('recibo.pdf');
+            });
+        }
+
+        // Função para limpar o formulário
+        function resetForm() {
+            document.getElementById('receiptNumber').value = '';
+            const today = new Date();
+            document.getElementById('receiptDate').value = today.toISOString().substr(0, 10);
+            document.getElementById('receiptAmount').value = '';
+            document.getElementById('receiptFrom').value = '';
+            document.getElementById('receiptFromDocument').value = '';
+            document.getElementById('receiptDescription').value = '';
+            document.getElementById('receiptIssuer').value = '';
+            document.getElementById('receiptIssuerDocument').value = '';
+            document.getElementById('receiptCity').value = '';
+            document.getElementById('paymentMethod').value = 'Dinheiro';
+            document.getElementById('receiptColor').value = 'blue';
+            
+            document.getElementById('receiptContainer').classList.add('hidden');
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'94cd2d8f67a2f1d6',t:'MTc0OTQzNTkyMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
