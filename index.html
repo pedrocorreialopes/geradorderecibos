@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de Recibos Glipearte</title>
+    <title>Gerador de Recibos Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -394,9 +392,12 @@
 
             const formattedValue = formatCurrency(receiptValue);
             const valueInWords = convertNumberToWords(parseFloat(receiptValue.replace(/\./g, '').replace(',', '.')));
-            const today = new Date(receiptDate);
+            
+            // Corrected date handling
+            const dateParts = receiptDate.split('-');
+            const correctDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
             const options = { year: 'numeric', month: 'long', day: 'numeric' };
-            const formattedDate = today.toLocaleDateString('pt-BR', options);
+            const formattedDate = correctDate.toLocaleDateString('pt-BR', options);
 
             const receiptContainer = document.getElementById('receiptContainer');
             receiptContainer.className = `receipt ${receiptColor} mt-8`; // Apply selected color and show
